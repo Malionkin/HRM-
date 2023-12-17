@@ -15,7 +15,6 @@ class DatabaseViewer(QMainWindow):
 
         self.layout = QVBoxLayout()
 
-        # Добавляем текстовый виджет с вашим текстом
         info_label = QLabel("Малёнкин Яков Олегович, 4 курс 4 группа 2023 год")
         info_label.setAlignment(Qt.AlignCenter)
         info_label.setStyleSheet("font-size: 16px; font-weight: bold;")
@@ -24,7 +23,7 @@ class DatabaseViewer(QMainWindow):
         self.table_combobox = QComboBox()
         self.layout.addWidget(self.table_combobox)
 
-        button_layout = QHBoxLayout()  # Горизонтальный макет для кнопок
+        button_layout = QHBoxLayout()
 
         self.show_button = QPushButton("Show Table")
         self.edit_button = QPushButton("Edit")
@@ -58,12 +57,12 @@ class DatabaseViewer(QMainWindow):
             port="5432"
         )
 
-        self.edit_mode = False  # Флаг для режима редактирования
-        self.original_data = None  # Хранит исходные данные перед редактированием
+        self.edit_mode = False
+        self.original_data = None
 
         self.load_tables()
 
-        self.table_view.setSortingEnabled(True)  # Включаем сортировку для таблицы
+        self.table_view.setSortingEnabled(True)
 
         self.show_button.clicked.connect(self.show_table)
         self.edit_button.clicked.connect(self.enable_editing)
@@ -100,13 +99,13 @@ class DatabaseViewer(QMainWindow):
 
         cursor.close()
 
-        self.delete_button.setEnabled(False)  # Отключите кнопку удаления при загрузке данных
+        self.delete_button.setEnabled(False)
 
     def enable_editing(self):
         self.edit_mode = True
         self.apply_button.setEnabled(True)
         self.cancel_button.setEnabled(True)
-        self.original_data = []  # Сохраняем исходные данные перед редактированием
+        self.original_data = []
 
         for i in range(self.table_view.rowCount()):
             row_data = []
@@ -115,7 +114,7 @@ class DatabaseViewer(QMainWindow):
                 row_data.append(item.text())
             self.original_data.append(row_data)
 
-        self.delete_button.setEnabled(True)  # Разрешите кнопку удаления в режиме редактирования
+        self.delete_button.setEnabled(True)
 
     def apply_changes(self):
         if self.edit_mode:
@@ -128,7 +127,7 @@ class DatabaseViewer(QMainWindow):
                     item = self.table_view.item(i, j)
                     row_data.append(item.text())
 
-                record_id = self.table_view.item(i, 0).text()  # Идентификатор
+                record_id = self.table_view.item(i, 0).text()
 
                 update_query = f"UPDATE {selected_table} SET "
                 for j, column_name in enumerate(self.table_view.horizontalHeaderItem(j).text() for j in range(1, self.table_view.columnCount())):
@@ -149,7 +148,6 @@ class DatabaseViewer(QMainWindow):
 
     def cancel_changes(self):
         if self.edit_mode and self.original_data:
-            # Восстанавливаем исходные данные
             for i in range(self.table_view.rowCount()):
                 for j in range(self.table_view.columnCount()):
                     item = self.table_view.item(i, j)
@@ -158,7 +156,7 @@ class DatabaseViewer(QMainWindow):
         self.edit_mode = False
         self.apply_button.setEnabled(False)
         self.cancel_button.setEnabled(False)
-        self.delete_button.setEnabled(False)  # Отключите кнопку удаления при отмене
+        self.delete_button.setEnabled(False)
 
     def add_row_dialog(self):
         selected_table = self.table_combobox.currentText()
@@ -178,27 +176,23 @@ class DatabaseViewer(QMainWindow):
 
     def delete_row(self):
         if self.edit_mode:
-            # Если находимся в режиме редактирования, то выходим из него
             self.cancel_changes()
         
-        selected_row = self.table_view.currentRow()  # Получаем выбранную строку
+        selected_row = self.table_view.currentRow()
 
         if selected_row >= 0:
             selected_table = self.table_combobox.currentText()
             item = self.table_view.item(selected_row, 0)
-            record_id = item.text()  # Идентификатор
+            record_id = item.text()
 
             cursor = self.db_connection.cursor()
 
-            # Создаем запрос DELETE для удаления строки по идентификатору
-            delete_query = f"DELETE FROM {selected_table} WHERE {self.table_view.horizontalHeaderItem(0).text()} = %s"
-
-            cursor.execute(delete_query, (record_id,))
+            update_query = f"UPDATE departments SET is_active = false WHERE departmentid = %s"
+            cursor.execute(update_query, (record_id,))
             self.db_connection.commit()
             cursor.close()
 
-            # Удаляем строку из таблицы
-            self.table_view.removeRow(selected_row)
+            self.load_tables()
 
 class AddRowDialog(QDialog):
     def __init__(self, column_names, db_connection):
@@ -218,7 +212,7 @@ class AddRowDialog(QDialog):
             label = QLabel(column_name)
             if column_name == 'creationdate':
                 date_edit = QDateEdit()
-                date_edit.setCalendarPopup(True)  # Разрешаем календарь для выбора даты
+                date_edit.setCalendarPopup(True)
                 self.layout.addRow(label, date_edit)
                 self.row_values[column_name] = date_edit
             elif column_name == 'departmentid':
@@ -228,7 +222,7 @@ class AddRowDialog(QDialog):
                 self.row_values[column_name] = department_combobox
             elif column_name == 'birthdate':
                 date_edit = QDateEdit()
-                date_edit.setCalendarPopup(True)  # Разрешаем календарь для выбора даты
+                date_edit.setCalendarPopup(True)
                 self.layout.addRow(label, date_edit)
                 self.row_values[column_name] = date_edit
             else:
@@ -247,7 +241,6 @@ class AddRowDialog(QDialog):
             if column_name == 'creationdate':
                 values.append(widget.date().toString("yyyy-MM-dd"))
             elif column_name == 'departmentid':
-                # Получаем айдишник департамента по выбранному имени
                 values.append(self.get_department_id(widget.currentText()))
             else:
                 values.append(widget.text())
@@ -255,7 +248,7 @@ class AddRowDialog(QDialog):
 
     def get_department_names(self, db_connection):
         cursor = self.db_connection.cursor()
-        cursor.execute("SELECT departmentname FROM departments")
+        cursor.execute("SELECT departmentname FROM departments WHERE is_active = true")
         department_names = [row[0] for row in cursor.fetchall()]
         cursor.close()
         return department_names
